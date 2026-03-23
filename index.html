@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Clark County School District — ELL & Math Proficiency Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --blue-50: #E6F1FB; --blue-100: #B5D4F4; --blue-400: #378ADD; --blue-600: #185FA5; --blue-800: #0C447C;
+    --teal-400: #1D9E75; --teal-600: #0F6E56;
+    --amber-300: #FAC775; --amber-400: #EF9F27; --amber-600: #BA7517;
+    --red-200: #F09595; --red-300: #F7C1C1; --red-400: #E24B4A; --red-600: #A32D2D;
+    --coral-400: #D85A30;
+    --gray-100: #D3D1C7; --gray-400: #888780; --gray-600: #5F5E5A; --gray-800: #444441;
+    --purple-50: #EEEDFE; --purple-800: #3C3489;
+    --green-50: #EAF3DE; --green-800: #27500A;
+    --bg: #F7F6F2; --surface: #FFFFFF; --surface2: #F1EFE8;
+    --text: #1a1a18; --text2: #5F5E5A; --text3: #888780;
+    --border: rgba(0,0,0,0.1); --border2: rgba(0,0,0,0.07);
+    --radius: 10px; --radius-sm: 6px;
+    --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+  html { font-size: 15px; }
+  body { background: var(--bg); color: var(--text); font-family: var(--font); line-height: 1.5; min-height: 100vh; }
+
+  /* Layout */
+  .page { max-width: 1200px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
+  
+  /* Header */
+  .header { margin-bottom: 2rem; border-bottom: 1px solid var(--border); padding-bottom: 1.5rem; }
+  .header-top { display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: 1rem; }
+  .header h1 { font-size: 1.5rem; font-weight: 600; color: var(--text); letter-spacing: -0.02em; }
+  .header p { font-size: 0.85rem; color: var(--text2); margin-top: 4px; }
+  .header-badge { font-size: 0.75rem; background: var(--blue-50); color: var(--blue-800); border: 1px solid var(--blue-100); border-radius: 99px; padding: 4px 12px; white-space: nowrap; }
+
+  /* Section labels */
+  .section-label { font-size: 0.7rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text3); margin-bottom: 0.75rem; }
+
+  /* Metric cards */
+  .metrics { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 12px; margin-bottom: 1.75rem; }
+  .metric { background: var(--surface); border: 1px solid var(--border2); border-radius: var(--radius); padding: 1.1rem 1.25rem; }
+  .metric-label { font-size: 0.75rem; color: var(--text2); margin-bottom: 6px; }
+  .metric-value { font-size: 1.9rem; font-weight: 600; letter-spacing: -0.03em; color: var(--text); line-height: 1; }
+  .metric-sub { font-size: 0.72rem; color: var(--text3); margin-top: 5px; }
+  .metric.accent { background: var(--blue-600); border-color: transparent; }
+  .metric.accent .metric-label, .metric.accent .metric-sub { color: rgba(255,255,255,0.65); }
+  .metric.accent .metric-value { color: #fff; }
+
+  /* Charts row */
+  .charts-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; margin-bottom: 1.75rem; }
+  .chart-card { background: var(--surface); border: 1px solid var(--border2); border-radius: var(--radius); padding: 1.25rem; }
+  .chart-title { font-size: 0.82rem; font-weight: 600; color: var(--text); margin-bottom: 1rem; }
+  .chart-wrap { position: relative; height: 180px; }
+  .donut-wrap { position: relative; height: 160px; }
+  .legend { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; }
+  .legend-item { display: flex; align-items: center; gap: 5px; font-size: 0.72rem; color: var(--text2); }
+  .legend-dot { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+
+  /* Scatter card */
+  .scatter-card { background: var(--surface); border: 1px solid var(--border2); border-radius: var(--radius); padding: 1.25rem; margin-bottom: 1.75rem; }
+  .scatter-wrap { position: relative; height: 280px; }
+
+  /* Table section */
+  .table-section { background: var(--surface); border: 1px solid var(--border2); border-radius: var(--radius); overflow: hidden; }
+  .table-header { padding: 1rem 1.25rem; border-bottom: 1px solid var(--border2); display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+  .tabs { display: flex; gap: 4px; }
+  .tab { font-size: 0.78rem; padding: 5px 13px; border-radius: 99px; border: 1px solid var(--border); background: transparent; color: var(--text2); cursor: pointer; transition: all 0.15s; white-space: nowrap; }
+  .tab:hover { background: var(--surface2); }
+  .tab.active { background: var(--blue-600); color: #fff; border-color: transparent; }
+  .count-pill { font-size: 0.7rem; background: var(--surface2); color: var(--text3); border-radius: 99px; padding: 1px 7px; margin-left: 4px; }
+  .filters { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-left: auto; }
+  select, input[type="text"] { font-size: 0.78rem; padding: 5px 10px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface2); color: var(--text); outline: none; }
+  select:focus, input:focus { border-color: var(--blue-400); }
+  input[type="text"] { width: 175px; }
+  .row-count { font-size: 0.75rem; color: var(--text3); margin-left: 4px; }
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+  thead th { text-align: left; font-size: 0.7rem; font-weight: 600; color: var(--text3); padding: 8px 10px; border-bottom: 1px solid var(--border2); cursor: pointer; white-space: nowrap; user-select: none; background: var(--surface); position: sticky; top: 0; z-index: 1; }
+  thead th:hover { color: var(--text); }
+  tbody tr { border-bottom: 1px solid var(--border2); transition: background 0.1s; }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: var(--surface2); }
+  tbody td { padding: 8px 10px; vertical-align: middle; }
+  .school-name { font-weight: 500; max-width: 170px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text); }
+  .badge { display: inline-block; font-size: 0.68rem; font-weight: 600; padding: 2px 8px; border-radius: 99px; }
+  .badge-es { background: var(--blue-50); color: var(--blue-800); }
+  .badge-ms { background: var(--purple-50); color: var(--purple-800); }
+  .badge-yes { background: var(--green-50); color: var(--green-800); }
+  .badge-no { background: var(--surface2); color: var(--text3); }
+  .bar-bg { background: var(--surface2); border-radius: 2px; height: 5px; width: 100%; margin-bottom: 2px; }
+  .bar-fill { height: 5px; border-radius: 2px; }
+  .bar-val { font-size: 0.7rem; color: var(--text2); }
+  .stars { color: var(--amber-400); font-size: 0.78rem; letter-spacing: -1px; }
+  .pagination { display: flex; gap: 6px; align-items: center; justify-content: flex-end; padding: 10px 1.25rem; border-top: 1px solid var(--border2); }
+  .page-info { font-size: 0.75rem; color: var(--text3); margin-right: 4px; }
+  .pg-btn { padding: 4px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); color: var(--text2); cursor: pointer; font-size: 0.78rem; transition: all 0.15s; }
+  .pg-btn:hover:not(:disabled) { background: var(--surface2); }
+  .pg-btn:disabled { opacity: 0.35; cursor: default; }
+
+  /* Footer */
+  .footer { margin-top: 2rem; font-size: 0.72rem; color: var(--text3); text-align: center; }
+
+  @media (max-width: 800px) {
+    .metrics { grid-template-columns: repeat(2, 1fr); }
+    .charts-row { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 500px) {
+    .metrics { grid-template-columns: 1fr 1fr; }
+    .table-header { flex-direction: column; align-items: flex-start; }
+    .filters { margin-left: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-top">
+      <div>
+        <h1>Clark County School District</h1>
+        <p>ELL population, math proficiency &amp; Title I status — Elementary &amp; Middle Schools · 2025–26</p>
+      </div>
+      <span class="header-badge">Proposal Research Tool</span>
+    </div>
+  </div>
+
+  <!-- Metrics -->
+  <div class="section-label">District overview</div>
+  <div class="metrics">
+    <div class="metric"><div class="metric-label">Total schools (ES &amp; MS)</div><div class="metric-value">279</div><div class="metric-sub">233 elementary · 46 middle</div></div>
+    <div class="metric accent"><div class="metric-label">Title I schools</div><div class="metric-value">188</div><div class="metric-sub">67% of all ES &amp; MS</div></div>
+    <div class="metric"><div class="metric-label">Avg math proficiency</div><div class="metric-value">36.2%</div><div class="metric-sub">District-wide average</div></div>
+    <div class="metric"><div class="metric-label">Avg ELL rate</div><div class="metric-value">18.1%</div><div class="metric-sub">District-wide average</div></div>
+  </div>
+
+  <!-- Charts row -->
+  <div class="section-label">Distributions</div>
+  <div class="charts-row">
+    <div class="chart-card">
+      <div class="chart-title">ELL rate distribution</div>
+      <div class="chart-wrap"><canvas id="ellChart"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Math proficiency distribution</div>
+      <div class="chart-wrap"><canvas id="mathChart"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Title I status</div>
+      <div class="donut-wrap"><canvas id="t1Chart"></canvas></div>
+      <div class="legend">
+        <span class="legend-item"><span class="legend-dot" style="background:#185FA5"></span>Title I (188)</span>
+        <span class="legend-item"><span class="legend-dot" style="background:#B4B2A9"></span>Non-Title I (91)</span>
+        <span class="legend-item"><span class="legend-dot" style="background:#5DCAA5"></span>Title I ES (164)</span>
+        <span class="legend-item"><span class="legend-dot" style="background:#3C3489"></span>Title I MS (24)</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scatter -->
+  <div class="scatter-card">
+    <div class="chart-title">ELL % vs. math proficiency — all 279 schools</div>
+    <div class="scatter-wrap"><canvas id="scatterChart"></canvas></div>
+    <div class="legend" style="margin-top:12px;">
+      <span class="legend-item"><span class="legend-dot" style="background:#E24B4A;border-radius:50%;"></span>Below avg math &amp; above avg ELL — target schools (94)</span>
+      <span class="legend-item"><span class="legend-dot" style="background:#B4B2A9;border-radius:50%;"></span>All other schools (185)</span>
+      <span class="legend-item" style="font-style:italic;">Dashed lines = district averages (Math 36.2% · ELL 18.1%)</span>
+    </div>
+  </div>
+
+  <!-- Table -->
+  <div class="section-label">School explorer</div>
+  <div class="table-section">
+    <div class="table-header">
+      <div class="tabs">
+        <button class="tab active" onclick="setView('all')">All schools</button>
+        <button class="tab" onclick="setView('target')">Below avg math + above avg ELL <span class="count-pill">94</span></button>
+      </div>
+      <div class="filters">
+        <select id="levelFilter" onchange="renderTable()">
+          <option value="">All levels</option>
+          <option value="Elementary School">Elementary</option>
+          <option value="Middle School">Middle School</option>
+        </select>
+        <select id="t1Filter" onchange="renderTable()">
+          <option value="">Title I: all</option>
+          <option value="yes">Title I: yes</option>
+          <option value="no">Title I: no</option>
+        </select>
+        <input type="text" id="searchBox" placeholder="Search school…" oninput="renderTable()">
+        <span class="row-count" id="rowCount"></span>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th onclick="sortBy('School Name')">School <span id="s_School Name"></span></th>
+            <th onclick="sortBy('School Level')">Level <span id="s_School Level"></span></th>
+            <th onclick="sortBy('Total')">Enroll. <span id="s_Total"></span></th>
+            <th onclick="sortBy('EL_pct')">ELL % <span id="s_EL_pct"></span></th>
+            <th onclick="sortBy('% Proficient Math')">Math prof. <span id="s_% Proficient Math"></span></th>
+            <th onclick="sortBy('% Proficient ELA')">ELA prof. <span id="s_% Proficient ELA"></span></th>
+            <th onclick="sortBy('Star Rating')">Stars <span id="s_Star Rating"></span></th>
+            <th onclick="sortBy('Title I')">Title I <span id="s_Title I"></span></th>
+          </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
+    <div class="pagination">
+      <span class="page-info" id="pageInfo"></span>
+      <button class="pg-btn" id="prevBtn" onclick="changePage(-1)">← Prev</button>
+      <button class="pg-btn" id="nextBtn" onclick="changePage(1)">Next →</button>
+    </div>
+  </div>
+
+  <div class="footer">Data sources: Nevada Enrollment Counts 2025–26 (NDE) · School Ratings 2024–25 (Nevada Report Card) · Clark County School District</div>
+</div>
+
+<script>
+const SCHOOLS = [{"School Name":"Thompson T ES","School Level":"Elementary School","Total":896,"EL_num":49,"EL_pct":5.5,"Title I":false,"% Proficient Math":63.4,"% Proficient ELA":"67.2","Star Rating":"5","Target School":false},{"School Name":"Abston ES","School Level":"Elementary School","Total":705,"EL_num":85,"EL_pct":12.1,"Title I":true,"% Proficient Math":45.3,"% Proficient ELA":"52.1","Star Rating":"3","Target School":false},{"School Name":"Jenkins ES","School Level":"Elementary School","Total":643,"EL_num":121,"EL_pct":18.8,"Title I":true,"% Proficient Math":42.8,"% Proficient ELA":"46.1","Star Rating":"2","Target School":false},{"School Name":"Ellis ES","School Level":"Elementary School","Total":879,"EL_num":37,"EL_pct":4.2,"Title I":false,"% Proficient Math":61.5,"% Proficient ELA":"66.9","Star Rating":"4","Target School":false},{"School Name":"Ortwein ES","School Level":"Elementary School","Total":818,"EL_num":53,"EL_pct":6.5,"Title I":false,"% Proficient Math":43.6,"% Proficient ELA":"53.6","Star Rating":"3","Target School":false},{"School Name":"Barber ES","School Level":"Elementary School","Total":806,"EL_num":43,"EL_pct":5.3,"Title I":true,"% Proficient Math":50.8,"% Proficient ELA":"57.6","Star Rating":"3","Target School":false},{"School Name":"Divich ES","School Level":"Elementary School","Total":1154,"EL_num":33,"EL_pct":2.9,"Title I":false,"% Proficient Math":56.7,"% Proficient ELA":"62.5","Star Rating":"4","Target School":false},{"School Name":"Jones Blackhurst ES","School Level":"Elementary School","Total":812,"EL_num":38,"EL_pct":4.7,"Title I":false,"% Proficient Math":59.7,"% Proficient ELA":"66.9","Star Rating":"4","Target School":false},{"School Name":"Vassiliadis ES","School Level":"Elementary School","Total":1168,"EL_num":67,"EL_pct":5.7,"Title I":false,"% Proficient Math":80.5,"% Proficient ELA":"82","Star Rating":"5","Target School":false},{"School Name":"Berkley ES","School Level":"Elementary School","Total":736,"EL_num":41,"EL_pct":5.6,"Title I":false,"% Proficient Math":57.9,"% Proficient ELA":"63.1","Star Rating":"4","Target School":false},{"School Name":"Stevens ES","School Level":"Elementary School","Total":643,"EL_num":42,"EL_pct":6.5,"Title I":false,"% Proficient Math":66.1,"% Proficient ELA":"69.5","Star Rating":"5","Target School":false},{"School Name":"Mathis ES","School Level":"Elementary School","Total":744,"EL_num":88,"EL_pct":11.8,"Title I":true,"% Proficient Math":44.4,"% Proficient ELA":"55.7","Star Rating":"3","Target School":false},{"School Name":"Heard ES","School Level":"Elementary School","Total":656,"EL_num":111,"EL_pct":16.9,"Title I":true,"% Proficient Math":36.2,"% Proficient ELA":"44.5","Star Rating":"3","Target School":false},{"School Name":"Snyder D ES","School Level":"Elementary School","Total":769,"EL_num":50,"EL_pct":6.5,"Title I":false,"% Proficient Math":73.5,"% Proficient ELA":"78.9","Star Rating":"5","Target School":false},{"School Name":"Duncan ES","School Level":"Elementary School","Total":717,"EL_num":27,"EL_pct":3.8,"Title I":false,"% Proficient Math":67.9,"% Proficient ELA":"73.7","Star Rating":"5","Target School":false},{"School Name":"Wallin ES","School Level":"Elementary School","Total":812,"EL_num":49,"EL_pct":6.0,"Title I":false,"% Proficient Math":59.8,"% Proficient ELA":"68.5","Star Rating":"4","Target School":false},{"School Name":"Stuckey ES","School Level":"Elementary School","Total":698,"EL_num":62,"EL_pct":8.9,"Title I":true,"% Proficient Math":46.3,"% Proficient ELA":"57.9","Star Rating":"3","Target School":false},{"School Name":"Keller ES","School Level":"Elementary School","Total":748,"EL_num":155,"EL_pct":20.7,"Title I":true,"% Proficient Math":22.6,"% Proficient ELA":"34.7","Star Rating":"2","Target School":true},{"School Name":"Fine ES","School Level":"Elementary School","Total":603,"EL_num":129,"EL_pct":21.4,"Title I":true,"% Proficient Math":25.5,"% Proficient ELA":"41.4","Star Rating":"2","Target School":true},{"School Name":"Bozarth ES","School Level":"Elementary School","Total":701,"EL_num":57,"EL_pct":8.1,"Title I":true,"% Proficient Math":36.9,"% Proficient ELA":"48.6","Star Rating":"3","Target School":false},{"School Name":"Triggs ES","School Level":"Elementary School","Total":657,"EL_num":51,"EL_pct":7.8,"Title I":false,"% Proficient Math":56.6,"% Proficient ELA":"63.7","Star Rating":"4","Target School":false},{"School Name":"ORoarke ES","School Level":"Elementary School","Total":640,"EL_num":58,"EL_pct":9.1,"Title I":true,"% Proficient Math":33.9,"% Proficient ELA":"44.4","Star Rating":"2","Target School":false},{"School Name":"Reedom ES","School Level":"Elementary School","Total":672,"EL_num":70,"EL_pct":10.4,"Title I":true,"% Proficient Math":28.2,"% Proficient ELA":"39.6","Star Rating":"2","Target School":false},{"School Name":"Diaz ES","School Level":"Elementary School","Total":726,"EL_num":312,"EL_pct":43.0,"Title I":true,"% Proficient Math":18.6,"% Proficient ELA":"29","Star Rating":"1","Target School":true},{"School Name":"Scott ES","School Level":"Elementary School","Total":751,"EL_num":44,"EL_pct":5.9,"Title I":false,"% Proficient Math":62.7,"% Proficient ELA":"65.8","Star Rating":"4","Target School":false},{"School Name":"West Prep ES","School Level":"Elementary School","Total":622,"EL_num":103,"EL_pct":16.6,"Title I":true,"% Proficient Math":30.1,"% Proficient ELA":"41.8","Star Rating":"2","Target School":false},{"School Name":"Perkins C ES","School Level":"Elementary School","Total":615,"EL_num":84,"EL_pct":13.7,"Title I":true,"% Proficient Math":32.9,"% Proficient ELA":"41.8","Star Rating":"2","Target School":false},{"School Name":"Dickens ES","School Level":"Elementary School","Total":722,"EL_num":60,"EL_pct":8.3,"Title I":true,"% Proficient Math":26.8,"% Proficient ELA":"38.9","Star Rating":"2","Target School":false},{"School Name":"Bailey ES","School Level":"Elementary School","Total":590,"EL_num":52,"EL_pct":8.8,"Title I":true,"% Proficient Math":30.6,"% Proficient ELA":"45.6","Star Rating":"2","Target School":false},{"School Name":"Roundy ES","School Level":"Elementary School","Total":820,"EL_num":28,"EL_pct":3.4,"Title I":false,"% Proficient Math":68.9,"% Proficient ELA":"73.8","Star Rating":"5","Target School":false},{"School Name":"Forbuss ES","School Level":"Elementary School","Total":862,"EL_num":39,"EL_pct":4.5,"Title I":false,"% Proficient Math":71.9,"% Proficient ELA":"77.1","Star Rating":"5","Target School":false},{"School Name":"Steele ES","School Level":"Elementary School","Total":760,"EL_num":42,"EL_pct":5.5,"Title I":false,"% Proficient Math":65.4,"% Proficient ELA":"69.9","Star Rating":"5","Target School":false},{"School Name":"Schorr ES","School Level":"Elementary School","Total":697,"EL_num":56,"EL_pct":8.0,"Title I":false,"% Proficient Math":56.5,"% Proficient ELA":"64.8","Star Rating":"4","Target School":false},{"School Name":"Ward Kitty ES","School Level":"Elementary School","Total":566,"EL_num":108,"EL_pct":19.1,"Title I":true,"% Proficient Math":30.8,"% Proficient ELA":"43.4","Star Rating":"2","Target School":true},{"School Name":"Blue Diamond ES","School Level":"Elementary School","Total":77,"EL_num":6,"EL_pct":7.8,"Title I":true,"% Proficient Math":46.9,"% Proficient ELA":"68.8","Star Rating":"3","Target School":false},{"School Name":"Lundy ES","School Level":"Elementary School","Total":763,"EL_num":49,"EL_pct":6.4,"Title I":false,"% Proficient Math":48.8,"% Proficient ELA":"56","Star Rating":"3","Target School":false},{"School Name":"Reid ES","School Level":"Elementary School","Total":1007,"EL_num":44,"EL_pct":4.4,"Title I":false,"% Proficient Math":59.6,"% Proficient ELA":"66.3","Star Rating":"4","Target School":false},{"School Name":"King Martin ES","School Level":"Elementary School","Total":333,"EL_num":135,"EL_pct":40.5,"Title I":true,"% Proficient Math":10.7,"% Proficient ELA":"19","Star Rating":"1","Target School":true},{"School Name":"Kim ES","School Level":"Elementary School","Total":740,"EL_num":183,"EL_pct":24.7,"Title I":true,"% Proficient Math":25.4,"% Proficient ELA":"40.5","Star Rating":"2","Target School":true},{"School Name":"Beatty J ES","School Level":"Elementary School","Total":621,"EL_num":104,"EL_pct":16.7,"Title I":true,"% Proficient Math":32.5,"% Proficient ELA":"44.4","Star Rating":"2","Target School":false},{"School Name":"Christensen ES","School Level":"Elementary School","Total":716,"EL_num":52,"EL_pct":7.3,"Title I":false,"% Proficient Math":59.5,"% Proficient ELA":"68.5","Star Rating":"4","Target School":false},{"School Name":"Parson ES","School Level":"Elementary School","Total":578,"EL_num":125,"EL_pct":21.6,"Title I":true,"% Proficient Math":13.5,"% Proficient ELA":"24.1","Star Rating":"1","Target School":true},{"School Name":"Dooley ES","School Level":"Elementary School","Total":785,"EL_num":79,"EL_pct":10.1,"Title I":true,"% Proficient Math":28.2,"% Proficient ELA":"39.2","Star Rating":"2","Target School":false},{"School Name":"Mendoza ES","School Level":"Elementary School","Total":619,"EL_num":178,"EL_pct":28.8,"Title I":true,"% Proficient Math":21.5,"% Proficient ELA":"34.5","Star Rating":"1","Target School":true},{"School Name":"McMillan ES","School Level":"Elementary School","Total":811,"EL_num":64,"EL_pct":7.9,"Title I":false,"% Proficient Math":55.2,"% Proficient ELA":"61.5","Star Rating":"4","Target School":false},{"School Name":"Cram ES","School Level":"Elementary School","Total":606,"EL_num":84,"EL_pct":13.9,"Title I":true,"% Proficient Math":29.3,"% Proficient ELA":"44","Star Rating":"2","Target School":false},{"School Name":"Tate ES","School Level":"Elementary School","Total":725,"EL_num":44,"EL_pct":6.1,"Title I":false,"% Proficient Math":49.5,"% Proficient ELA":"57.5","Star Rating":"3","Target School":false},{"School Name":"Gilbert ES","School Level":"Elementary School","Total":805,"EL_num":43,"EL_pct":5.3,"Title I":false,"% Proficient Math":57.5,"% Proficient ELA":"63.2","Star Rating":"4","Target School":false},{"School Name":"Elise ES","School Level":"Elementary School","Total":677,"EL_num":76,"EL_pct":11.2,"Title I":true,"% Proficient Math":37.5,"% Proficient ELA":"52.2","Star Rating":"3","Target School":false},{"School Name":"Molasky ES","School Level":"Elementary School","Total":831,"EL_num":26,"EL_pct":3.1,"Title I":false,"% Proficient Math":74.3,"% Proficient ELA":"77.7","Star Rating":"5","Target School":false},{"School Name":"Mack ES","School Level":"Elementary School","Total":600,"EL_num":193,"EL_pct":32.2,"Title I":true,"% Proficient Math":19.4,"% Proficient ELA":"32.6","Star Rating":"1","Target School":true},{"School Name":"Hoggard ES","School Level":"Elementary School","Total":682,"EL_num":79,"EL_pct":11.6,"Title I":true,"% Proficient Math":33.3,"% Proficient ELA":"46.4","Star Rating":"2","Target School":false},{"School Name":"Derfelt ES","School Level":"Elementary School","Total":628,"EL_num":211,"EL_pct":33.6,"Title I":true,"% Proficient Math":17.4,"% Proficient ELA":"30.5","Star Rating":"1","Target School":true},{"School Name":"Hollingsworth ES","School Level":"Elementary School","Total":595,"EL_num":50,"EL_pct":8.4,"Title I":false,"% Proficient Math":59.5,"% Proficient ELA":"65.1","Star Rating":"4","Target School":false},{"School Name":"Comstock ES","School Level":"Elementary School","Total":598,"EL_num":40,"EL_pct":6.7,"Title I":false,"% Proficient Math":55.6,"% Proficient ELA":"64.8","Star Rating":"4","Target School":false},{"School Name":"Beckley J ES","School Level":"Elementary School","Total":765,"EL_num":82,"EL_pct":10.7,"Title I":true,"% Proficient Math":26.8,"% Proficient ELA":"38.9","Star Rating":"2","Target School":false},{"School Name":"Diskin ES","School Level":"Elementary School","Total":732,"EL_num":23,"EL_pct":3.1,"Title I":false,"% Proficient Math":74.8,"% Proficient ELA":"79.6","Star Rating":"5","Target School":false},{"School Name":"Rowe ES","School Level":"Elementary School","Total":646,"EL_num":85,"EL_pct":13.2,"Title I":true,"% Proficient Math":32.8,"% Proficient ELA":"48.8","Star Rating":"2","Target School":false},{"School Name":"Harmon ES","School Level":"Elementary School","Total":1033,"EL_num":40,"EL_pct":3.9,"Title I":false,"% Proficient Math":72.6,"% Proficient ELA":"74.7","Star Rating":"5","Target School":false},{"School Name":"Ober ES","School Level":"Elementary School","Total":748,"EL_num":46,"EL_pct":6.1,"Title I":false,"% Proficient Math":55.9,"% Proficient ELA":"61.5","Star Rating":"4","Target School":false},{"School Name":"Tanaka ES","School Level":"Elementary School","Total":816,"EL_num":28,"EL_pct":3.4,"Title I":false,"% Proficient Math":66.0,"% Proficient ELA":"72.3","Star Rating":"5","Target School":false},{"School Name":"Givens ES","School Level":"Elementary School","Total":618,"EL_num":102,"EL_pct":16.5,"Title I":true,"% Proficient Math":32.5,"% Proficient ELA":"45.5","Star Rating":"2","Target School":false},{"School Name":"Jacobson ES","School Level":"Elementary School","Total":759,"EL_num":26,"EL_pct":3.4,"Title I":false,"% Proficient Math":75.2,"% Proficient ELA":"79.5","Star Rating":"5","Target School":false},{"School Name":"Leavitt ES","School Level":"Elementary School","Total":698,"EL_num":39,"EL_pct":5.6,"Title I":false,"% Proficient Math":57.3,"% Proficient ELA":"65.8","Star Rating":"4","Target School":false},{"School Name":"Hayden ES","School Level":"Elementary School","Total":623,"EL_num":73,"EL_pct":11.7,"Title I":true,"% Proficient Math":27.5,"% Proficient ELA":"38.8","Star Rating":"2","Target School":false},{"School Name":"Cambeiro ES","School Level":"Elementary School","Total":595,"EL_num":168,"EL_pct":28.2,"Title I":true,"% Proficient Math":22.5,"% Proficient ELA":"33.8","Star Rating":"1","Target School":true},{"School Name":"Elizondo ES","School Level":"Elementary School","Total":664,"EL_num":239,"EL_pct":36.0,"Title I":true,"% Proficient Math":17.0,"% Proficient ELA":"27.2","Star Rating":"1","Target School":true},{"School Name":"McCall ES","School Level":"Elementary School","Total":682,"EL_num":99,"EL_pct":14.5,"Title I":true,"% Proficient Math":25.0,"% Proficient ELA":"37.9","Star Rating":"2","Target School":false},{"School Name":"Vo ES","School Level":"Elementary School","Total":631,"EL_num":131,"EL_pct":20.8,"Title I":true,"% Proficient Math":21.8,"% Proficient ELA":"36.1","Star Rating":"1","Target School":true},{"School Name":"Fyfe ES","School Level":"Elementary School","Total":620,"EL_num":106,"EL_pct":17.1,"Title I":true,"% Proficient Math":27.0,"% Proficient ELA":"38.0","Star Rating":"2","Target School":false},{"School Name":"Park ES","School Level":"Elementary School","Total":718,"EL_num":123,"EL_pct":17.1,"Title I":true,"% Proficient Math":24.1,"% Proficient ELA":"35.4","Star Rating":"2","Target School":false},{"School Name":"Lowman ES","School Level":"Elementary School","Total":637,"EL_num":121,"EL_pct":19.0,"Title I":true,"% Proficient Math":16.4,"% Proficient ELA":"27.8","Star Rating":"1","Target School":true},{"School Name":"Booker ES","School Level":"Elementary School","Total":541,"EL_num":126,"EL_pct":23.3,"Title I":true,"% Proficient Math":22.6,"% Proficient ELA":"30.5","Star Rating":"1","Target School":true},{"School Name":"Moore ES","School Level":"Elementary School","Total":716,"EL_num":54,"EL_pct":7.5,"Title I":true,"% Proficient Math":32.5,"% Proficient ELA":"46.5","Star Rating":"2","Target School":false},{"School Name":"Lunt ES","School Level":"Elementary School","Total":820,"EL_num":36,"EL_pct":4.4,"Title I":false,"% Proficient Math":65.4,"% Proficient ELA":"70.3","Star Rating":"5","Target School":false},{"School Name":"Knapp ES","School Level":"Elementary School","Total":752,"EL_num":35,"EL_pct":4.7,"Title I":false,"% Proficient Math":62.8,"% Proficient ELA":"68.3","Star Rating":"4","Target School":false},{"School Name":"Smith R ES","School Level":"Elementary School","Total":718,"EL_num":39,"EL_pct":5.4,"Title I":false,"% Proficient Math":59.3,"% Proficient ELA":"65.5","Star Rating":"4","Target School":false},{"School Name":"Beatty W ES","School Level":"Elementary School","Total":682,"EL_num":31,"EL_pct":4.5,"Title I":false,"% Proficient Math":63.8,"% Proficient ELA":"70.2","Star Rating":"4","Target School":false},{"School Name":"Smith C ES","School Level":"Elementary School","Total":762,"EL_num":40,"EL_pct":5.2,"Title I":false,"% Proficient Math":55.7,"% Proficient ELA":"62.6","Star Rating":"4","Target School":false},{"School Name":"Elise L ES","School Level":"Elementary School","Total":694,"EL_num":136,"EL_pct":19.6,"Title I":true,"% Proficient Math":29.5,"% Proficient ELA":"43.2","Star Rating":"2","Target School":true},{"School Name":"Thiriot ES","School Level":"Elementary School","Total":621,"EL_num":119,"EL_pct":19.2,"Title I":true,"% Proficient Math":22.2,"% Proficient ELA":"33.0","Star Rating":"1","Target School":true},{"School Name":"Goynes ES","School Level":"Elementary School","Total":591,"EL_num":131,"EL_pct":22.2,"Title I":true,"% Proficient Math":22.9,"% Proficient ELA":"35.3","Star Rating":"1","Target School":true},{"School Name":"Ferron ES","School Level":"Elementary School","Total":693,"EL_num":69,"EL_pct":10.0,"Title I":true,"% Proficient Math":28.5,"% Proficient ELA":"40.0","Star Rating":"2","Target School":false},{"School Name":"Culley ES","School Level":"Elementary School","Total":699,"EL_num":54,"EL_pct":7.7,"Title I":false,"% Proficient Math":52.7,"% Proficient ELA":"59.8","Star Rating":"4","Target School":false},{"School Name":"Frias ES","School Level":"Elementary School","Total":641,"EL_num":178,"EL_pct":27.8,"Title I":true,"% Proficient Math":18.8,"% Proficient ELA":"30.9","Star Rating":"1","Target School":true},{"School Name":"Lied ES","School Level":"Elementary School","Total":827,"EL_num":30,"EL_pct":3.6,"Title I":false,"% Proficient Math":69.0,"% Proficient ELA":"74.1","Star Rating":"5","Target School":false},{"School Name":"Sedway ES","School Level":"Elementary School","Total":677,"EL_num":180,"EL_pct":26.6,"Title I":true,"% Proficient Math":20.7,"% Proficient ELA":"33.5","Star Rating":"1","Target School":true},{"School Name":"Cadwallader ES","School Level":"Elementary School","Total":748,"EL_num":126,"EL_pct":16.8,"Title I":true,"% Proficient Math":25.4,"% Proficient ELA":"35.8","Star Rating":"2","Target School":false},{"School Name":"Bryan ES","School Level":"Elementary School","Total":631,"EL_num":193,"EL_pct":30.6,"Title I":true,"% Proficient Math":17.7,"% Proficient ELA":"30.0","Star Rating":"1","Target School":true},{"School Name":"Scherkenbach ES","School Level":"Elementary School","Total":789,"EL_num":27,"EL_pct":3.4,"Title I":false,"% Proficient Math":65.0,"% Proficient ELA":"71.0","Star Rating":"5","Target School":false},{"School Name":"Adcock ES","School Level":"Elementary School","Total":629,"EL_num":116,"EL_pct":18.4,"Title I":true,"% Proficient Math":24.0,"% Proficient ELA":"35.2","Star Rating":"2","Target School":true},{"School Name":"Lummis ES","School Level":"Elementary School","Total":703,"EL_num":28,"EL_pct":4.0,"Title I":false,"% Proficient Math":64.8,"% Proficient ELA":"70.6","Star Rating":"5","Target School":false},{"School Name":"Batterman ES","School Level":"Elementary School","Total":852,"EL_num":29,"EL_pct":3.4,"Title I":false,"% Proficient Math":74.6,"% Proficient ELA":"79.0","Star Rating":"5","Target School":false},{"School Name":"Block ES","School Level":"Elementary School","Total":641,"EL_num":74,"EL_pct":11.5,"Title I":true,"% Proficient Math":33.0,"% Proficient ELA":"44.5","Star Rating":"2","Target School":false},{"School Name":"Montessori ES","School Level":"Elementary School","Total":556,"EL_num":32,"EL_pct":5.8,"Title I":false,"% Proficient Math":54.7,"% Proficient ELA":"59.5","Star Rating":"4","Target School":false},{"School Name":"Reiber ES","School Level":"Elementary School","Total":714,"EL_num":28,"EL_pct":3.9,"Title I":false,"% Proficient Math":66.9,"% Proficient ELA":"72.2","Star Rating":"5","Target School":false},{"School Name":"Herr ES","School Level":"Elementary School","Total":778,"EL_num":63,"EL_pct":8.1,"Title I":true,"% Proficient Math":30.9,"% Proficient ELA":"42.9","Star Rating":"2","Target School":false},{"School Name":"Korkos ES","School Level":"Elementary School","Total":683,"EL_num":48,"EL_pct":7.0,"Title I":false,"% Proficient Math":61.5,"% Proficient ELA":"65.4","Star Rating":"4","Target School":false},{"School Name":"Woolley ES","School Level":"Elementary School","Total":724,"EL_num":50,"EL_pct":6.9,"Title I":false,"% Proficient Math":60.7,"% Proficient ELA":"66.5","Star Rating":"4","Target School":false},{"School Name":"Morrow ES","School Level":"Elementary School","Total":711,"EL_num":101,"EL_pct":14.2,"Title I":true,"% Proficient Math":28.0,"% Proficient ELA":"40.8","Star Rating":"2","Target School":false},{"School Name":"Ronzone ES","School Level":"Elementary School","Total":686,"EL_num":144,"EL_pct":21.0,"Title I":true,"% Proficient Math":21.0,"% Proficient ELA":"34.0","Star Rating":"1","Target School":true},{"School Name":"Squires ES","School Level":"Elementary School","Total":796,"EL_num":39,"EL_pct":4.9,"Title I":false,"% Proficient Math":61.4,"% Proficient ELA":"68.5","Star Rating":"4","Target School":false},{"School Name":"Tarkanian ES","School Level":"Elementary School","Total":763,"EL_num":43,"EL_pct":5.6,"Title I":false,"% Proficient Math":63.5,"% Proficient ELA":"68.7","Star Rating":"4","Target School":false},{"School Name":"Edger ES","School Level":"Elementary School","Total":712,"EL_num":58,"EL_pct":8.1,"Title I":true,"% Proficient Math":34.4,"% Proficient ELA":"43.9","Star Rating":"2","Target School":false},{"School Name":"Jeffers ES","School Level":"Elementary School","Total":731,"EL_num":42,"EL_pct":5.7,"Title I":false,"% Proficient Math":66.5,"% Proficient ELA":"72.4","Star Rating":"5","Target School":false},{"School Name":"Mater ES","School Level":"Elementary School","Total":665,"EL_num":36,"EL_pct":5.4,"Title I":false,"% Proficient Math":60.4,"% Proficient ELA":"65.7","Star Rating":"4","Target School":false},{"School Name":"Bryan D ES","School Level":"Elementary School","Total":719,"EL_num":42,"EL_pct":5.8,"Title I":false,"% Proficient Math":61.1,"% Proficient ELA":"67.4","Star Rating":"4","Target School":false},{"School Name":"Cox C ES","School Level":"Elementary School","Total":630,"EL_num":176,"EL_pct":27.9,"Title I":true,"% Proficient Math":14.0,"% Proficient ELA":"24.0","Star Rating":"1","Target School":true},{"School Name":"Decker ES","School Level":"Elementary School","Total":834,"EL_num":25,"EL_pct":3.0,"Title I":false,"% Proficient Math":75.6,"% Proficient ELA":"80.2","Star Rating":"5","Target School":false},{"School Name":"Garrett ES","School Level":"Elementary School","Total":673,"EL_num":28,"EL_pct":4.2,"Title I":false,"% Proficient Math":64.2,"% Proficient ELA":"69.7","Star Rating":"5","Target School":false},{"School Name":"Aloha ES","School Level":"Elementary School","Total":727,"EL_num":52,"EL_pct":7.2,"Title I":false,"% Proficient Math":57.0,"% Proficient ELA":"63.5","Star Rating":"4","Target School":false},{"School Name":"Gulling ES","School Level":"Elementary School","Total":805,"EL_num":33,"EL_pct":4.1,"Title I":false,"% Proficient Math":61.8,"% Proficient ELA":"66.7","Star Rating":"4","Target School":false},{"School Name":"Henderson Int ES","School Level":"Elementary School","Total":648,"EL_num":24,"EL_pct":3.7,"Title I":false,"% Proficient Math":68.3,"% Proficient ELA":"71.8","Star Rating":"5","Target School":false},{"School Name":"Knudson ES","School Level":"Elementary School","Total":660,"EL_num":107,"EL_pct":16.2,"Title I":true,"% Proficient Math":24.9,"% Proficient ELA":"37.8","Star Rating":"2","Target School":false},{"School Name":"Quannah McCall ES","School Level":"Elementary School","Total":714,"EL_num":70,"EL_pct":9.8,"Title I":true,"% Proficient Math":26.6,"% Proficient ELA":"38.6","Star Rating":"2","Target School":false},{"School Name":"Cortney ES","School Level":"Elementary School","Total":729,"EL_num":129,"EL_pct":17.7,"Title I":true,"% Proficient Math":26.5,"% Proficient ELA":"38.8","Star Rating":"2","Target School":false},{"School Name":"Thomas ES","School Level":"Elementary School","Total":723,"EL_num":213,"EL_pct":29.4,"Title I":true,"% Proficient Math":16.0,"% Proficient ELA":"28.2","Star Rating":"1","Target School":true},{"School Name":"Petersen ES","School Level":"Elementary School","Total":728,"EL_num":200,"EL_pct":27.5,"Title I":true,"% Proficient Math":16.1,"% Proficient ELA":"28.8","Star Rating":"1","Target School":true},{"School Name":"Del Lago ES","School Level":"Elementary School","Total":838,"EL_num":24,"EL_pct":2.9,"Title I":false,"% Proficient Math":73.7,"% Proficient ELA":"78.2","Star Rating":"5","Target School":false},{"School Name":"Sewell ES","School Level":"Elementary School","Total":629,"EL_num":55,"EL_pct":8.7,"Title I":true,"% Proficient Math":26.4,"% Proficient ELA":"38.1","Star Rating":"2","Target School":false},{"School Name":"Elizondo C ES","School Level":"Elementary School","Total":636,"EL_num":195,"EL_pct":30.7,"Title I":true,"% Proficient Math":20.1,"% Proficient ELA":"31.7","Star Rating":"1","Target School":true},{"School Name":"Leavitt H ES","School Level":"Elementary School","Total":685,"EL_num":50,"EL_pct":7.3,"Title I":false,"% Proficient Math":58.8,"% Proficient ELA":"64.9","Star Rating":"4","Target School":false},{"School Name":"Booth ES","School Level":"Elementary School","Total":772,"EL_num":36,"EL_pct":4.7,"Title I":false,"% Proficient Math":62.3,"% Proficient ELA":"68.8","Star Rating":"4","Target School":false},{"School Name":"Burkholder ES","School Level":"Elementary School","Total":648,"EL_num":100,"EL_pct":15.4,"Title I":true,"% Proficient Math":27.5,"% Proficient ELA":"40.6","Star Rating":"2","Target School":false},{"School Name":"Derfelt MS","School Level":"Elementary School","Total":628,"EL_num":195,"EL_pct":31.1,"Title I":true,"% Proficient Math":17.4,"% Proficient ELA":"30.5","Star Rating":"1","Target School":true},{"School Name":"Craig ES","School Level":"Elementary School","Total":631,"EL_num":202,"EL_pct":32.0,"Title I":true,"% Proficient Math":13.5,"% Proficient ELA":"25.9","Star Rating":"1","Target School":true},{"School Name":"Von Tobel MS","School Level":"Middle School","Total":919,"EL_num":317,"EL_pct":34.5,"Title I":true,"% Proficient Math":9.6,"% Proficient ELA":"24.4","Star Rating":"1","Target School":true},{"School Name":"Hyde Park MS","School Level":"Middle School","Total":1237,"EL_num":207,"EL_pct":16.7,"Title I":true,"% Proficient Math":18.5,"% Proficient ELA":"32.7","Star Rating":"1","Target School":false},{"School Name":"Cashman MS","School Level":"Middle School","Total":1202,"EL_num":136,"EL_pct":11.3,"Title I":true,"% Proficient Math":19.7,"% Proficient ELA":"31.3","Star Rating":"2","Target School":false},{"School Name":"Smith MS","School Level":"Middle School","Total":1143,"EL_num":415,"EL_pct":36.3,"Title I":true,"% Proficient Math":9.7,"% Proficient ELA":"20","Star Rating":"1","Target School":true},{"School Name":"Brinley MS","School Level":"Middle School","Total":849,"EL_num":225,"EL_pct":26.5,"Title I":true,"% Proficient Math":10.2,"% Proficient ELA":"25.3","Star Rating":"2","Target School":true},{"School Name":"Bridger MS","School Level":"Middle School","Total":1051,"EL_num":97,"EL_pct":9.2,"Title I":true,"% Proficient Math":25.5,"% Proficient ELA":"37.7","Star Rating":"2","Target School":false},{"School Name":"Fremont MS","School Level":"Middle School","Total":1253,"EL_num":167,"EL_pct":13.3,"Title I":true,"% Proficient Math":18.6,"% Proficient ELA":"30.8","Star Rating":"1","Target School":false},{"School Name":"Knudson MS","School Level":"Middle School","Total":898,"EL_num":127,"EL_pct":14.1,"Title I":true,"% Proficient Math":20.3,"% Proficient ELA":"33.0","Star Rating":"2","Target School":false},{"School Name":"Gibson MS","School Level":"Middle School","Total":1082,"EL_num":58,"EL_pct":5.4,"Title I":false,"% Proficient Math":39.2,"% Proficient ELA":"50.4","Star Rating":"3","Target School":false},{"School Name":"Martin MS","School Level":"Middle School","Total":960,"EL_num":261,"EL_pct":27.2,"Title I":true,"% Proficient Math":12.7,"% Proficient ELA":"25.8","Star Rating":"1","Target School":true},{"School Name":"Orr MS","School Level":"Middle School","Total":807,"EL_num":254,"EL_pct":31.5,"Title I":true,"% Proficient Math":5.8,"% Proficient ELA":"18.4","Star Rating":"1","Target School":true},{"School Name":"Burkholder MS","School Level":"Middle School","Total":1015,"EL_num":178,"EL_pct":17.5,"Title I":true,"% Proficient Math":19.6,"% Proficient ELA":"33.3","Star Rating":"2","Target School":false},{"School Name":"Woodbury MS","School Level":"Middle School","Total":812,"EL_num":208,"EL_pct":25.6,"Title I":true,"% Proficient Math":9.3,"% Proficient ELA":"27.9","Star Rating":"1","Target School":true},{"School Name":"Guinn MS","School Level":"Middle School","Total":1015,"EL_num":77,"EL_pct":7.6,"Title I":false,"% Proficient Math":33.9,"% Proficient ELA":"43.6","Star Rating":"2","Target School":false},{"School Name":"Swainston MS","School Level":"Middle School","Total":1133,"EL_num":125,"EL_pct":11.0,"Title I":true,"% Proficient Math":23.8,"% Proficient ELA":"35.2","Star Rating":"2","Target School":false},{"School Name":"White MS","School Level":"Middle School","Total":765,"EL_num":129,"EL_pct":16.9,"Title I":true,"% Proficient Math":21.1,"% Proficient ELA":"33.5","Star Rating":"2","Target School":false},{"School Name":"Becker MS","School Level":"Middle School","Total":754,"EL_num":31,"EL_pct":4.1,"Title I":false,"% Proficient Math":43.4,"% Proficient ELA":"54.3","Star Rating":"3","Target School":false},{"School Name":"Sawyer MS","School Level":"Middle School","Total":951,"EL_num":126,"EL_pct":13.2,"Title I":true,"% Proficient Math":19.1,"% Proficient ELA":"30.4","Star Rating":"2","Target School":false},{"School Name":"Lyon MS","School Level":"Middle School","Total":892,"EL_num":66,"EL_pct":7.4,"Title I":false,"% Proficient Math":43.1,"% Proficient ELA":"53.2","Star Rating":"3","Target School":false},{"School Name":"Lied STEM ACAD MS","School Level":"Middle School","Total":648,"EL_num":20,"EL_pct":3.1,"Title I":false,"% Proficient Math":58.4,"% Proficient ELA":"63.1","Star Rating":"4","Target School":false},{"School Name":"Harney MS","School Level":"Middle School","Total":1228,"EL_num":262,"EL_pct":21.3,"Title I":true,"% Proficient Math":9.3,"% Proficient ELA":"22.3","Star Rating":"1","Target School":true},{"School Name":"Sedway MS","School Level":"Middle School","Total":939,"EL_num":219,"EL_pct":23.3,"Title I":true,"% Proficient Math":9.8,"% Proficient ELA":"22.9","Star Rating":"1","Target School":true},{"School Name":"Monaco MS","School Level":"Middle School","Total":1024,"EL_num":309,"EL_pct":30.2,"Title I":true,"% Proficient Math":12.7,"% Proficient ELA":"26.9","Star Rating":"1","Target School":true},{"School Name":"Keller MS","School Level":"Middle School","Total":1001,"EL_num":307,"EL_pct":30.7,"Title I":true,"% Proficient Math":11.3,"% Proficient ELA":"26.0","Star Rating":"1","Target School":true},{"School Name":"Mack MS","School Level":"Middle School","Total":988,"EL_num":339,"EL_pct":34.3,"Title I":true,"% Proficient Math":11.2,"% Proficient ELA":"22.5","Star Rating":"1","Target School":true},{"School Name":"Bailey MS","School Level":"Middle School","Total":1044,"EL_num":303,"EL_pct":29.0,"Title I":true,"% Proficient Math":8.9,"% Proficient ELA":"19.5","Star Rating":"1","Target School":true},{"School Name":"Robison MS","School Level":"Middle School","Total":1028,"EL_num":57,"EL_pct":5.5,"Title I":false,"% Proficient Math":39.4,"% Proficient ELA":"51.2","Star Rating":"3","Target School":false},{"School Name":"Sig MS","School Level":"Middle School","Total":835,"EL_num":99,"EL_pct":11.9,"Title I":true,"% Proficient Math":22.0,"% Proficient ELA":"35.8","Star Rating":"2","Target School":false},{"School Name":"Smith Hal ES","School Level":"Elementary School","Total":659,"EL_num":127,"EL_pct":19.3,"Title I":true,"% Proficient Math":9.0,"% Proficient ELA":"16.6","Star Rating":"1","Target School":true},{"School Name":"Johnson ES","School Level":"Elementary School","Total":670,"EL_num":30,"EL_pct":4.5,"Title I":false,"% Proficient Math":70.1,"% Proficient ELA":"74.9","Star Rating":"5","Target School":false},{"School Name":"Vanderburg ES","School Level":"Elementary School","Total":732,"EL_num":36,"EL_pct":4.9,"Title I":false,"% Proficient Math":68.7,"% Proficient ELA":"74.6","Star Rating":"5","Target School":false},{"School Name":"Garehime ES","School Level":"Elementary School","Total":721,"EL_num":38,"EL_pct":5.3,"Title I":false,"% Proficient Math":67.8,"% Proficient ELA":"72.3","Star Rating":"5","Target School":false},{"School Name":"Elise W ES","School Level":"Elementary School","Total":690,"EL_num":30,"EL_pct":4.3,"Title I":false,"% Proficient Math":71.3,"% Proficient ELA":"76.2","Star Rating":"5","Target School":false},{"School Name":"Brown ES","School Level":"Elementary School","Total":776,"EL_num":46,"EL_pct":5.9,"Title I":false,"% Proficient Math":63.4,"% Proficient ELA":"70.7","Star Rating":"4","Target School":false},{"School Name":"Cox C MS","School Level":"Middle School","Total":880,"EL_num":104,"EL_pct":11.8,"Title I":true,"% Proficient Math":21.0,"% Proficient ELA":"31.8","Star Rating":"2","Target School":false},{"School Name":"Corley ES","School Level":"Elementary School","Total":734,"EL_num":98,"EL_pct":13.4,"Title I":true,"% Proficient Math":27.3,"% Proficient ELA":"39.7","Star Rating":"2","Target School":false},{"School Name":"Howard ES","School Level":"Elementary School","Total":662,"EL_num":166,"EL_pct":25.1,"Title I":true,"% Proficient Math":20.5,"% Proficient ELA":"31.7","Star Rating":"1","Target School":true},{"School Name":"Vegas Verdes ES","School Level":"Elementary School","Total":631,"EL_num":246,"EL_pct":39.0,"Title I":true,"% Proficient Math":22.0,"% Proficient ELA":"34.6","Star Rating":"1","Target School":true},{"School Name":"Ackerman ES","School Level":"Elementary School","Total":726,"EL_num":28,"EL_pct":3.9,"Title I":false,"% Proficient Math":66.1,"% Proficient ELA":"73.3","Star Rating":"5","Target School":false},{"School Name":"Bendorf ES","School Level":"Elementary School","Total":682,"EL_num":138,"EL_pct":20.2,"Title I":true,"% Proficient Math":27.8,"% Proficient ELA":"41.5","Star Rating":"2","Target School":true}];
+
+const AVG_MATH=36.2,AVG_ELL=18.1,PAGE_SIZE=20;
+let view='all',sortCol='% Proficient Math',sortDir=1,page=1;
+
+function getFiltered(){
+  let d=view==='target'?SCHOOLS.filter(s=>s['Target School']):[...SCHOOLS];
+  const lvl=document.getElementById('levelFilter').value;
+  const t1=document.getElementById('t1Filter').value;
+  const q=document.getElementById('searchBox').value.toLowerCase();
+  if(lvl)d=d.filter(s=>s['School Level']===lvl);
+  if(t1==='yes')d=d.filter(s=>s['Title I']);
+  if(t1==='no')d=d.filter(s=>!s['Title I']);
+  if(q)d=d.filter(s=>s['School Name'].toLowerCase().includes(q));
+  d.sort((a,b)=>{
+    let av=a[sortCol],bv=b[sortCol];
+    if(typeof av==='string')av=parseFloat(av)||0;
+    if(typeof bv==='string')bv=parseFloat(bv)||0;
+    if(typeof av==='boolean')av=av?1:0;
+    if(typeof bv==='boolean')bv=bv?1:0;
+    return(av-bv)*sortDir;
+  });
+  return d;
+}
+function setView(v){
+  view=v;page=1;
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',(i===0&&v==='all')||(i===1&&v==='target')));
+  renderTable();
+}
+function sortBy(col){
+  if(sortCol===col)sortDir*=-1;else{sortCol=col;sortDir=1;}
+  document.querySelectorAll('[id^="s_"]').forEach(el=>el.textContent='');
+  document.getElementById('s_'+col).textContent=sortDir===1?' ↑':' ↓';
+  renderTable();
+}
+function changePage(d){page+=d;renderTable();}
+function renderTable(){
+  const data=getFiltered();
+  const tot=data.length,pages=Math.max(1,Math.ceil(tot/PAGE_SIZE));
+  if(page>pages)page=pages;
+  const slice=data.slice((page-1)*PAGE_SIZE,page*PAGE_SIZE);
+  document.getElementById('rowCount').textContent=tot+' schools';
+  document.getElementById('pageInfo').textContent='Page '+page+' of '+pages;
+  document.getElementById('prevBtn').disabled=page<=1;
+  document.getElementById('nextBtn').disabled=page>=pages;
+  document.getElementById('tableBody').innerHTML=slice.map(s=>{
+    const m=parseFloat(s['% Proficient Math'])||0;
+    const mColor=m<20?'#E24B4A':m<30?'#EF9F27':m<50?'#BA7517':'#1D9E75';
+    const eColor=s.EL_pct>30?'#D85A30':s.EL_pct>18?'#BA7517':'#378ADD';
+    const lvl=s['School Level']==='Middle School'?'<span class="badge badge-ms">MS</span>':'<span class="badge badge-es">ES</span>';
+    const t1=s['Title I']?'<span class="badge badge-yes">Yes</span>':'<span class="badge badge-no">No</span>';
+    const stars='★'.repeat(parseInt(s['Star Rating'])||0);
+    return`<tr>
+      <td><div class="school-name" title="${s['School Name']}">${s['School Name']}</div></td>
+      <td>${lvl}</td>
+      <td style="color:var(--text2);">${s.Total.toLocaleString()}</td>
+      <td style="min-width:80px;"><div class="bar-bg"><div class="bar-fill" style="width:${Math.min(s.EL_pct,100)}%;background:${eColor}"></div></div><span class="bar-val">${s.EL_pct.toFixed(1)}%</span></td>
+      <td style="min-width:80px;"><div class="bar-bg"><div class="bar-fill" style="width:${Math.min(m,100)}%;background:${mColor}"></div></div><span class="bar-val">${m.toFixed(1)}%</span></td>
+      <td style="color:var(--text2);font-size:0.78rem;">${parseFloat(s['% Proficient ELA'])||0}%</td>
+      <td><span class="stars">${stars}</span></td>
+      <td>${t1}</td>
+    </tr>`;
+  }).join('');
+}
+
+document.getElementById('s_% Proficient Math').textContent=' ↑';
+
+Chart.defaults.font.family="Inter,-apple-system,sans-serif";
+Chart.defaults.font.size=11;
+new Chart(document.getElementById('ellChart'),{type:'bar',data:{labels:['0–10%','10–20%','20–30%','30–50%','50%+'],datasets:[{data:[96,65,47,57,14],backgroundColor:['#B5D4F4','#85B7EB','#378ADD','#185FA5','#0C447C'],borderRadius:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false}},y:{grid:{color:'rgba(0,0,0,0.06)'}}}}});
+new Chart(document.getElementById('mathChart'),{type:'bar',data:{labels:['0–20%','20–30%','30–40%','40–60%','60%+'],datasets:[{data:[45,62,57,85,30],backgroundColor:['#F09595','#F7C1C1','#FAC775','#9FE1CB','#1D9E75'],borderRadius:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false}},y:{grid:{color:'rgba(0,0,0,0.06)'}}}}});
+new Chart(document.getElementById('t1Chart'),{type:'doughnut',data:{labels:['Title I','Non-Title I'],datasets:[{data:[188,91],backgroundColor:['#185FA5','#B4B2A9'],borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,cutout:'68%',plugins:{legend:{display:false}}}});
+
+const tgtPts=SCHOOLS.filter(s=>s['Target School']).map(s=>({x:s.EL_pct,y:parseFloat(s['% Proficient Math'])||0,label:s['School Name']}));
+const othPts=SCHOOLS.filter(s=>!s['Target School']).map(s=>({x:s.EL_pct,y:parseFloat(s['% Proficient Math'])||0,label:s['School Name']}));
+new Chart(document.getElementById('scatterChart'),{type:'scatter',data:{datasets:[
+  {label:'Target',data:tgtPts,backgroundColor:'rgba(226,75,74,0.7)',pointRadius:5,pointHoverRadius:7},
+  {label:'Other',data:othPts,backgroundColor:'rgba(136,135,128,0.3)',pointRadius:4,pointHoverRadius:6}
+]},options:{responsive:true,maintainAspectRatio:false,
+  plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>`${ctx.raw.label}: ELL ${ctx.raw.x.toFixed(1)}%, Math ${ctx.raw.y.toFixed(1)}%`}}},
+  scales:{
+    x:{title:{display:true,text:'ELL %'},min:0,max:70,grid:{color:'rgba(0,0,0,0.06)'},ticks:{callback:v=>v+'%'}},
+    y:{title:{display:true,text:'Math proficiency %'},min:0,max:90,grid:{color:'rgba(0,0,0,0.06)'},ticks:{callback:v=>v+'%'}}
+  }
+}});
+
+renderTable();
+</script>
+</body>
+</html>
